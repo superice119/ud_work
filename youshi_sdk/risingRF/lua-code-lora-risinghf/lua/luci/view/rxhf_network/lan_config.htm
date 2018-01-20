@@ -1,0 +1,83 @@
+<%#
+ Copyright 2010 Jo-Philipp Wich <jow@openwrt.org>
+ Licensed to the public under the Apache License 2.0.
+-%>
+
+<%-
+	local x = luci.model.uci.cursor()
+	local lan_ip = x:get("network", "lan", "ipaddr")
+-%>
+
+<%+header%>
+
+<script type="text/javascript" src="<%=resource%>/cbi.js"></script>
+<script type="text/javascript" src="<%=resource%>/jquip.all.min.js"></script>
+<script type="text/javascript">//<![CDATA[
+	var stxhr = new XHR();
+
+	function isValidIP(ip) {
+		if (ip == "") {
+			return false;
+		}     
+    	var reg = /^(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])$/     
+    	return reg.test(ip);     
+	}
+
+	function apply() {
+		var lan_ip = $("#lan_ip").val();
+		if (!isValidIP(lan_ip)) {
+			alert("invalid ip");
+			return false;
+		}
+
+		var r = confirm("Need to restart after the entry into force, is it OK?");
+		if (r) {
+			var e = document.getElementById('cbi-apply-system-status');
+			if(e){
+				e.innerHTML = 'Configuration applied.';
+				e.parentNode.style.display = "inline";
+			}
+			stxhr.get('<%=luci.dispatcher.build_url("rxhf", "network")%>/modify_lan_ip', "lan_ip=" + lan_ip, function(x) {
+					if (x.responseText) {
+						if (x.responseText == "finish") {
+							var e = document.getElementById('cbi-apply-system-status');
+							if(e){
+								e.innerHTML = 'Please wait: Device rebooting...';
+								window.setTimeout("location='<%=controller%>/rxhf'", 50000);
+							}
+						} else {
+							var e = document.getElementById('cbi-apply-system-status');
+							if(e) e.innerHTML = x.responseText;
+						}
+					}
+				}
+			);
+		}
+	}
+
+//]]></script>
+
+<form method="post" action="">
+	<div class="cbi-map">
+		<h2><a id="content" name="content"><%:LAN config%></a></h2>
+		<fieldset class="cbi-section" id="cbi-apply-system" style="display: none;">
+			<legend>Applying changes</legend>
+			<img src="<%=resource%>/icons/loading.gif" alt="Loading" style="vertical-align:middle">
+			<span id="cbi-apply-system-status">Configuration applied.</span>
+		</fieldset>
+		<fieldset class="cbi-section" id="section">
+			<legend><%:LAN IP%></legend>
+			<div class="cbi-value">
+				<label class="cbi-value-title"><%:IP%></label>
+				<div class="cbi-value-field">
+					<input type="text" class="cbi-input-text" name="lan_ip" id="lan_ip" value="<%=lan_ip%>" />
+				</div>
+			</div>
+		</fieldset>
+	</div>
+</form>
+<div class="cbi-page-actions">
+	<input class="cbi-button cbi-button-apply" type="button" value="Save &amp; Apply" onclick="apply();" />
+</div>
+
+<%+footer%>

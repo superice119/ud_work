@@ -1,0 +1,46 @@
+#!/bin/sh /etc/rc.common
+
+START=99
+
+start()
+{
+	if [ -f "/etc/config/rxhf" ]; then
+		local use_lora_sdk=$(uci get rxhf.use.use_lora_sdk 2> /dev/null)
+		if [ -n "$use_lora_sdk" ]; then
+			local use_lora_sdk_ver=$(uci get rxhf."$use_lora_sdk".use_lora_sdk_ver 2> /dev/null)
+			if [ -n "$use_lora_sdk_ver" ]; then
+				local exec_stop=$(uci get rxhf."$use_lora_sdk_ver".exec_stop 2> /dev/null)
+				if [ -n "$exec_stop" ]; then
+					"$exec_stop"
+				fi
+				local exec_start=$(uci get rxhf."$use_lora_sdk_ver".exec_start 2> /dev/null)
+				if [ -n "$exec_start" ]; then
+					# for ud dev
+					/home/rxhf/lora_gateway/reset_lgw.sh start 25
+					"$exec_start" &
+				fi
+			fi
+		fi
+	fi
+}
+
+stop()
+{
+	if [ -f "/etc/config/rxhf" ]; then
+		local use_lora_sdk=$(uci get rxhf.use.use_lora_sdk 2> /dev/null)
+		if [ -n "$use_lora_sdk" ]; then
+			local use_lora_sdk_ver=$(uci get rxhf."$use_lora_sdk".use_lora_sdk_ver 2> /dev/null)
+			if [ -n "$use_lora_sdk_ver" ]; then
+				local exec_stop=$(uci get rxhf."$use_lora_sdk_ver".exec_stop 2> /dev/null)
+				if [ -n "$exec_stop" ]; then
+					"$exec_stop"
+				fi
+			fi
+		fi
+	fi
+}
+
+restart()
+{
+	start
+}

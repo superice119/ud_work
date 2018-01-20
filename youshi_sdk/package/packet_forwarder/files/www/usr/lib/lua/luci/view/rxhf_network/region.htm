@@ -1,0 +1,80 @@
+<%#
+ Copyright 2010 Jo-Philipp Wich <jow@openwrt.org>
+ Licensed to the public under the Apache License 2.0.
+-%>
+
+<%-
+	local x = luci.model.uci.cursor()
+	local country = x:get("wireless", "radio0", "country")
+
+-%>
+<%+header%>
+
+<script type="text/javascript" src="<%=resource%>/cbi.js"></script>
+<script type="text/javascript" src="<%=resource%>/jquip.all.min.js"></script>
+<script type="text/javascript">//<![CDATA[
+	var stxhr = new XHR();
+
+	$(function(){
+		var country = "<%=country%>";
+		$("#country").val(country);
+	});
+
+	function switch_region(obj){
+		var r = confirm("Need to restart after the entry into force, is it OK?");
+		if (r) {
+			var data = "country="+obj.value
+
+			var e = document.getElementById('cbi-apply-system-status');
+			if(e){
+				e.innerHTML = 'Configuration applied.';
+				e.parentNode.style.display = "inline";
+			}
+			stxhr.get('<%=luci.dispatcher.build_url("rxhf", "network")%>/switch_region', data, function(x){
+					if (x.responseText){
+						if (x.responseText == "finish") {
+							var e = document.getElementById('cbi-apply-system-status');
+							if(e){
+								e.innerHTML = 'Please wait: Device rebooting...';
+								window.setTimeout("location='<%=controller%>/rxhf'", 50000);
+							}
+						} else {
+							var e = document.getElementById('cbi-apply-system-status');
+							if(e) e.innerHTML = x.responseText;
+						}
+					}
+				}
+			);
+		}
+	}
+//]]></script>
+
+<form method="post" action="">
+	<div class="cbi-map">
+		<h2><a id="content" name="content"><%:Region%></a></h2>
+		<fieldset class="cbi-section" id="cbi-apply-system" style="display: none;">
+			<legend>Applying changes</legend>
+			<img src="<%=resource%>/icons/loading.gif" alt="Loading" style="vertical-align:middle">
+			<span id="cbi-apply-system-status">Configuration applied.</span>
+		</fieldset>
+		<fieldset class="cbi-section" id="section">
+			<legend><%:Wireless Region%></legend>
+			<div id="modeDiv" class="cbi-value">
+				<label class="cbi-value-title"><%:currently working region%></label>
+				<div class="cbi-value-field">
+					<select class="cbi-input-select" name="country" id="country" onchange="switch_region(this)">
+						<option value="CN"><%:CHINA%></option>
+						<option value="TW"><%:TAIWAN%></option>
+						<option value="JP"><%:JAPAN%></option>
+						<option value="FR"><%:EUROPE%></option>
+						<option value="CA"><%:NORTH AMERICA%></option>
+						<option value="AU"><%:AUSTRALIA%></option>
+						<option value="VE"><%:VENEZUELA%></option>
+						<option value="IL"><%:LSRAEL%></option>
+					</select>
+				</div>
+			</div>
+		</fieldset>
+	</div>
+</form>
+<%+footer%>

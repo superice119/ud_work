@@ -1,0 +1,25 @@
+<%#
+ Copyright 2008 Steven Barth <steven@midlink.org>
+ Copyright 2008 Jo-Philipp Wich <jow@openwrt.org>
+ Licensed to the public under the Apache License 2.0.
+-%>
+
+<%+header%>
+<h2><a id="content" name="content"><%:System%></a></h2>
+<h3><%:Reset%></h3>
+<p><%:Resets the operating system of your device%></p>
+<%-
+local c = require("luci.model.uci").cursor():changes()
+if c and next(c) then
+-%>
+	<p class="warning"><%:Warning: Resetting user data will be lost!%></p> 
+<%-
+end
+if not reset then 
+-%>
+<p><a href="<%=controller%>/rxhf/system/reset?reset=1"><%:Perform reset%></a></p>
+<%- else -%>
+<p><%:Please wait: Device reseting...%></p>
+<script type="text/javascript">setTimeout("location='<%=controller%>/rxhf'", 50000)</script>
+<%- end -%>
+<%+footer%>

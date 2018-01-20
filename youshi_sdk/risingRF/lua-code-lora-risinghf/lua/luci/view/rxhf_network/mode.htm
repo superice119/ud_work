@@ -1,0 +1,262 @@
+<%#
+ Copyright 2010 Jo-Philipp Wich <jow@openwrt.org>
+ Licensed to the public under the Apache License 2.0.
+-%>
+
+<%-
+	local x = luci.model.uci.cursor()
+-%>
+<%+header%>
+
+<script type="text/javascript" src="<%=resource%>/cbi.js"></script>
+<script type="text/javascript" src="<%=resource%>/jquip.all.min.js"></script>
+<script type="text/javascript">//<![CDATA[
+	var stxhr = new XHR();
+
+	$(function(){
+		var conf_mode = "<%=x:get("rxhf", "mode", "net_mode")%>";
+		$("#mode").val(conf_mode);
+		$("#oldmode").val(conf_mode);
+
+		if (conf_mode == "apsta") {
+			$("#modeDiv").after('<div id="apssidDiv" class="cbi-value"><label class="cbi-value-title"><%:ApSsid%></label><div class="cbi-value-field"><input type="text" class="cbi-input-text" name="apssid" id="apssid" /></div></div><div id="apkeyDiv" class="cbi-value"><label class="cbi-value-title"><%:ApKey%></label><div class="cbi-value-field"><input type="text" class="cbi-input-text" name="apkey" id="apkey" /></div></div><div id="stassidDiv" class="cbi-value"><label class="cbi-value-title"><%:StaSsid%></label><div class="cbi-value-field"><input type="text" class="cbi-input-text" name="stassid" id="stassid" /><input type="button" class="cbi-button cbi-button-find" onclick="scan_wifi();" title="<%:Find network%>" value="<%:Scan Wifi%>" /></div></div><div id="stakeyDiv" class="cbi-value"><label class="cbi-value-title"><%:StaKey%></label><div class="cbi-value-field"><input type="text" class="cbi-input-text" name="stakey" id="stakey" /></div></div>');
+
+			var apssid = "<%=x:get("wireless", "ap", "ssid")%>";
+			var apencryption = "<%=x:get("wireless", "ap", "encryption")%>";
+			$("#apssid").val(apssid);
+			if (apencryption != "none") {
+				var apkey = "<%=x:get("wireless", "ap", "key")%>";
+				$("#apkey").val(apkey);
+			}
+
+			var stassid = "<%=x:get("wireless", "sta", "ssid")%>";
+			var staencryption = "<%=x:get("wireless", "sta", "encryption")%>";
+			$("#stassid").val(stassid);
+			if (staencryption != "none") {
+				var stakey = "<%=x:get("wireless", "sta", "key")%>";
+				$("#stakey").val(stakey);
+			}
+		} else if (conf_mode == "ap") {
+			$("#modeDiv").after('<div id="apssidDiv" class="cbi-value"><label class="cbi-value-title"><%:ApSsid%></label><div class="cbi-value-field"><input type="text" class="cbi-input-text" name="apssid" id="apssid" /></div></div><div id="apkeyDiv" class="cbi-value"><label class="cbi-value-title"><%:ApKey%></label><div class="cbi-value-field"><input type="text" class="cbi-input-text" name="apkey" id="apkey" /></div></div>');
+
+			var apssid = "<%=x:get("wireless", "ap", "ssid")%>";
+			var apencryption = "<%=x:get("wireless", "lan", "encryption")%>";
+			$("#apssid").val(apssid);
+			if (apencryption != "none") {
+				var apkey = "<%=x:get("wireless", "ap", "key")%>";
+				$("#apkey").val(apkey);
+			}
+		} else if (conf_mode == "pppoe") {
+			$("#modeDiv").after('<div id="apssidDiv" class="cbi-value"><label class="cbi-value-title"><%:ApSsid%></label><div class="cbi-value-field"><input type="text" class="cbi-input-text" name="apssid" id="apssid" /></div></div><div id="apkeyDiv" class="cbi-value"><label class="cbi-value-title"><%:ApKey%></label><div class="cbi-value-field"><input type="text" class="cbi-input-text" name="apkey" id="apkey" /></div></div><div id="usernameDiv" class="cbi-value"><label class="cbi-value-title"><%:Username%></label><div class="cbi-value-field"><input type="text" class="cbi-input-text" name="username" id="username" /></div></div><div id="passwordDiv" class="cbi-value"><label class="cbi-value-title"><%:Password%></label><div class="cbi-value-field"><input type="text" class="cbi-input-text" name="password" id="password" /></div></div>');
+
+			var apssid = "<%=x:get("wireless", "ap", "ssid")%>";
+			var apencryption = "<%=x:get("wireless", "ap", "encryption")%>";
+			$("#apssid").val(apssid);
+			if (apencryption != "none") {
+				var apkey = "<%=x:get("wireless", "ap", "key")%>";
+				$("#apkey").val(apkey);
+			}
+
+			var proto = "<%=x:get("network", "wan", "proto")%>";
+			if (proto == "pppoe") {
+				var username = "<%=x:get("network", "wan", "username")%>";
+				var password = "<%=x:get("network", "wan", "password")%>";
+				$("#username").val(username);
+				$("#password").val(password);
+			}
+		}
+
+		var fail = "<%=x:get("rxhf", "mode", "fail")%>";
+		if (fail == "1") {
+			var r = confirm("Last switch mode fails, revert to ap.");
+			if (r) {
+				stxhr.get('<%=luci.dispatcher.build_url("rxhf", "network")%>/confirm_fail', "fail=0", function(x){})
+			}
+		}
+	});
+
+	function create_attr(obj){
+		$("#apssidDiv").remove();
+		$("#apkeyDiv").remove();
+		$("#scanDiv").remove();
+		$("#stassidDiv").remove();
+		$("#stakeyDiv").remove();
+		$("#usernameDiv").remove();
+		$("#passwordDiv").remove();
+		if (obj.value == "apsta") {
+			$("#modeDiv").after('<div id="apssidDiv" class="cbi-value"><label class="cbi-value-title"><%:ApSsid%></label><div class="cbi-value-field"><input type="text" class="cbi-input-text" name="apssid" id="apssid" /></div></div><div id="apkeyDiv" class="cbi-value"><label class="cbi-value-title"><%:ApKey%></label><div class="cbi-value-field"><input type="text" class="cbi-input-text" name="apkey" id="apkey" /></div></div><div id="stassidDiv" class="cbi-value"><label class="cbi-value-title"><%:StaSsid%></label><div class="cbi-value-field"><input type="text" class="cbi-input-text" name="stassid" id="stassid" /><input type="button" class="cbi-button cbi-button-find" onclick="scan_wifi();" title="<%:Find network%>" value="<%:Scan Wifi%>" /></div></div><div id="stakeyDiv" class="cbi-value"><label class="cbi-value-title"><%:StaKey%></label><div class="cbi-value-field"><input type="text" class="cbi-input-text" name="stakey" id="stakey" /></div></div>');
+
+			var apssid = "<%=x:get("wireless", "ap", "ssid")%>";
+			var apencryption = "<%=x:get("wireless", "ap", "encryption")%>";
+			$("#apssid").val(apssid);
+			if (apencryption != "none") {
+				var apkey = "<%=x:get("wireless", "ap", "key")%>";
+				$("#apkey").val(apkey);
+			}
+
+			var stassid = "<%=x:get("wireless", "sta", "ssid")%>";
+			var staencryption = "<%=x:get("wireless", "sta", "encryption")%>";
+			$("#stassid").val(stassid);
+			if (staencryption != "none") {
+				var stakey = "<%=x:get("wireless", "sta", "key")%>";
+				$("#stakey").val(stakey);
+			}
+		} else if (obj.value == "ap") {
+			$("#modeDiv").after('<div id="apssidDiv" class="cbi-value"><label class="cbi-value-title"><%:ApSsid%></label><div class="cbi-value-field"><input type="text" class="cbi-input-text" name="apssid" id="apssid" /></div></div><div id="apkeyDiv" class="cbi-value"><label class="cbi-value-title"><%:ApKey%></label><div class="cbi-value-field"><input type="text" class="cbi-input-text" name="apkey" id="apkey" /></div></div>');
+
+			var apssid = "<%=x:get("wireless", "ap", "ssid")%>";
+			var apencryption = "<%=x:get("wireless", "lan", "encryption")%>";
+			$("#apssid").val(apssid);
+			if (apencryption != "none") {
+				var apkey = "<%=x:get("wireless", "ap", "key")%>";
+				$("#apkey").val(apkey);
+			}
+		} else if (obj.value == "pppoe") {
+			$("#modeDiv").after('<div id="apssidDiv" class="cbi-value"><label class="cbi-value-title"><%:ApSsid%></label><div class="cbi-value-field"><input type="text" class="cbi-input-text" name="apssid" id="apssid" /></div></div><div id="apkeyDiv" class="cbi-value"><label class="cbi-value-title"><%:ApKey%></label><div class="cbi-value-field"><input type="text" class="cbi-input-text" name="apkey" id="apkey" /></div></div><div id="usernameDiv" class="cbi-value"><label class="cbi-value-title"><%:Username%></label><div class="cbi-value-field"><input type="text" class="cbi-input-text" name="username" id="username" /></div></div><div id="passwordDiv" class="cbi-value"><label class="cbi-value-title"><%:Password%></label><div class="cbi-value-field"><input type="text" class="cbi-input-text" name="password" id="password" /></div></div>');
+
+			var apssid = "<%=x:get("wireless", "ap", "ssid")%>";
+			var apencryption = "<%=x:get("wireless", "ap", "encryption")%>";
+			$("#apssid").val(apssid);
+			if (apencryption != "none") {
+				var apkey = "<%=x:get("wireless", "ap", "key")%>";
+				$("#apkey").val(apkey);
+			}
+
+			var proto = "<%=x:get("network", "wan", "proto")%>";
+			if (proto == "pppoe") {
+				var username = "<%=x:get("network", "wan", "username")%>";
+				var password = "<%=x:get("network", "wan", "password")%>";
+				$("#username").val(username);
+				$("#password").val(password);
+			}
+		}
+	}
+
+	function scan_wifi(){
+		var e = document.getElementById('cbi-apply-system-status');
+		if(e){
+			e.innerHTML = 'Please wait: Scan wifi...';
+			e.parentNode.style.display = "inline";
+		}
+		stxhr.get('<%=luci.dispatcher.build_url("rxhf", "network")%>/get_site_survey', {}, function(x, json){
+				if (x.status == 200 && json) {
+					var e = document.getElementById('cbi-apply-system-status');
+					if(e){
+						e.innerHTML = 'Scan done.';
+						window.setTimeout(function(){
+							e.parentNode.style.display = "none";
+						}, 500);
+					}
+
+					var shtml = '<select class="cbi-input-select" name="stassid" id="stassid"><option value="">-- select one --</option>';
+					for (var i = 0; i < json.length; i++) {
+						shtml += '<option value="' + json[i].ssid + '">' + json[i].ssid + ' (' + json[i].signal + '%) </option>'
+					}
+					shtml += '</select>';
+					var pss = $("#stassid").parent();
+					$("#stassid").remove();
+					pss.prepend(shtml);
+				}
+			}
+		);
+	}
+
+	function applied_tip(e, count){
+		var html = 'Configuration applied.';
+		if ($("#mode").val() == "apsta") 
+			html += ' If the switch fails, revert to ap.'
+
+		html += ' Executed for ' + count + ' seconds.';
+		e.innerHTML = html;
+		e.parentNode.style.display = "inline";
+	}
+
+	function switch_mode(){
+		var data = "oldmode="+$("#oldmode").val()+"&mode="+$("#mode").val();
+		if ($("#mode").val() == "apsta") {
+			if ($("#apkey").val().length > 0 && $("#apkey").val().length < 8) {
+				alert("Please enter a apkey greater than 8 bits");
+				return false;
+			}
+			if ($("#stakey").val().length > 0 && $("#stakey").val().length < 8) {
+				alert("Please enter a stakey greater than 8 bits");
+				return false;
+			}
+			data += "&apssid="+$("#apssid").val()+"&apkey="+$("#apkey").val()+"&stassid="+$("#stassid").val()+"&stakey="+$("#stakey").val();
+		} else if ($("#mode").val() == "ap") {
+			if ($("#apkey").val().length > 0 && $("#apkey").val().length < 8) {
+				alert("Please enter a apkey greater than 8 bits");
+				return false;
+			}
+			data += "&apssid="+$("#apssid").val()+"&apkey="+$("#apkey").val();
+		} else if ($("#mode").val() == "pppoe") {
+			if ($("#apkey").val().length > 0 && $("#apkey").val().length < 8) {
+				alert("Please enter a apkey greater than 8 bits");
+				return false;
+			}
+			data += "&apssid="+$("#apssid").val()+"&apkey="+$("#apkey").val()+"&username="+$("#username").val()+"&password="+$("#password").val();
+		}
+
+		var timer;
+		var inter;
+		var e = document.getElementById('cbi-apply-system-status');
+		if(e){
+			var count = 0;
+			applied_tip(e, count);
+			inter = window.setInterval(function(){
+				count++;
+				applied_tip(e, count);
+			}, 1000);
+			timer = window.setTimeout("location='<%=luci.dispatcher.build_url("rxhf", "network")%>/mode'", 60000);
+		}
+		stxhr.get('<%=luci.dispatcher.build_url("rxhf", "network")%>/switch_mode', data, function(x){
+				if (x.responseText){
+					window.clearTimeout(timer);
+					window.clearInterval(inter);
+					if (x.responseText == "finish") {
+						var e = document.getElementById('cbi-apply-system-status');
+						if(e){
+							e.innerHTML = x.responseText;
+							window.setTimeout(function(){
+								e.parentNode.style.display = "none";
+							}, 500);
+						}
+					} else {
+						var e = document.getElementById('cbi-apply-system-status');
+						if(e) e.innerHTML = x.responseText;
+					}
+				}
+			}
+		);
+	}
+//]]></script>
+
+<form method="post" action="">
+	<div class="cbi-map">
+		<h2><a id="content" name="content"><%:Mode%></a></h2>
+		<fieldset class="cbi-section" id="cbi-apply-system" style="display: none;">
+			<legend>Applying changes</legend>
+			<img src="<%=resource%>/icons/loading.gif" alt="Loading" style="vertical-align:middle">
+			<span id="cbi-apply-system-status">Configuration applied.</span>
+		</fieldset>
+		<fieldset class="cbi-section" id="section">
+			<input type="hidden" name="oldmode" id="oldmode"/>
+			<legend><%:Network Mode%></legend>
+			<div id="modeDiv" class="cbi-value">
+				<label class="cbi-value-title"><%:Network mode%></label>
+				<div class="cbi-value-field">
+					<select class="cbi-input-select" name="mode" id="mode" onchange="create_attr(this)">
+						<option value="ap"><%:ap (default)%></option>
+						<option value="apsta"><%:apsta%></option>
+						<option value="pppoe"><%:pppoe%></option>
+					</select>
+				</div>
+			</div>
+		</fieldset>
+	</div>
+</form>
+<div class="cbi-page-actions">
+	<input type="button" value="<%:Switch mode%>" class="cbi-button cbi-button-save" onclick="switch_mode()"/>
+</div>
+
+<%+footer%>

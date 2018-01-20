@@ -1,0 +1,29 @@
+
+config interface 'loopback'
+	option ifname 'lo'
+	option proto 'static'
+	option ipaddr '127.0.0.1'
+	option netmask '255.0.0.0'
+
+config globals 'globals'
+	option ula_prefix 'fd04:06e2:1615::/48'
+
+config interface 'lan'
+	option force_link '1'
+	option macaddr 'd0:6f:4a:4f:28:68'
+	option type 'bridge'
+	option proto 'static'
+	option netmask '255.255.255.0'
+	option ip6assign '60'
+	option ipaddr '192.168.100.1'
+	option ifname 'eth0'
+
+config switch
+	option name 'switch0'
+	option reset '1'
+	option enable_vlan '0'
+
+config interface 'wwan'
+	option proto 'dhcp'
+	option hostname 'rhf2s024'
+

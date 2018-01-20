@@ -1,0 +1,175 @@
+<%#
+ Copyright 2010 Jo-Philipp Wich <jow@openwrt.org>
+ Licensed to the public under the Apache License 2.0.
+-%>
+
+<%-
+	local x = luci.model.uci.cursor()
+-%>
+
+<%+header%>
+
+<script type="text/javascript" src="<%=resource%>/cbi.js"></script>
+<script type="text/javascript" src="<%=resource%>/jquip.all.min.js"></script>
+<script type="text/javascript">//<![CDATA[
+	var stxhr = new XHR();
+	var dns_count = 0;
+
+	$(function(){
+		var conf_mode = "<%=x:get("rxhf", "mode", "net_mode")%>";
+		if (conf_mode == "ap") {
+			var proto = "<%=x:get("network", "wan", "proto")%>";
+			if (proto != "") {
+				$("#protocol").val(proto);
+
+				if (proto == "static") {
+					var ipaddr = "<%=x:get("network", "wan", "ipaddr")%>";
+					var netmask = "<%=x:get("network", "wan", "netmask")%>";
+					var gateway = "<%=x:get("network", "wan", "gateway")%>";
+					var dns = "<%=x:get("network", "wan", "dns")%>";
+					$("#protocolDiv").after('<div id="addrDiv" class="cbi-value"><label class="cbi-value-title"><%:IP address%></label><div class="cbi-value-field"><input type="text" class="cbi-input-text" name="address" id="address" /></div></div><div id="maskDiv" class="cbi-value"><label class="cbi-value-title"><%:IP netmask%></label><div class="cbi-value-field"><select class="cbi-input-select" name="netmask" id="netmask" onchange="inputMask(this);"><option value="255.255.255.0">255.255.255.0</option><option value="255.255.0.0">255.255.0.0</option><option value="255.0.0.0">255.0.0.0</option><option value="">-- custom --</option></select></div></div><div id="gatewayDiv" class="cbi-value"><label class="cbi-value-title"><%:Gateway%></label><div class="cbi-value-field"><input type="text" class="cbi-input-text" name="gateway" id="gateway" /></div></div><div id="dnsDiv" class="cbi-value"><label class="cbi-value-title"><%:DNS servers%></label><div class="cbi-value-field"><div><input type="text" class="cbi-input-text" name="dns" id="dns1" /><img src="<%=resource%>/cbi/add.gif" class="cbi-image-button" onclick="addDns();"></div></div></div>');
+					dns_count++;
+					$("#address").val(ipaddr);
+					if (netmask != "255.255.255.0" || netmask != "255.255.0.0" || netmask != "255.0.0.0") {
+						$("#netmask").prepend('<option value="'+netmask+'">'+netmask+'</option>');
+					}
+					$("#netmask").val(netmask);
+					$("#gateway").val(gateway);
+					var dnss = new Array();
+					dnss = dns.split(" ");
+					var obj;
+					for (var i = 0; i < dnss.length; i++) {
+						if (i != 0) {
+							addDns();
+						}
+						obj = $("input[name='dns']").last();
+						obj.val(dnss[i]);
+					}
+				}
+			}			
+		} else {
+			$("#protocolDiv").remove();
+			$("#section").find("legend").after('<p class="alert-message warning cbi-value">The current mode not support config.</p>');
+		}
+	});
+
+	function addDns(){
+		var obj = $("input[name='dns']");
+
+		obj.next().attr({src:"<%=resource%>/cbi/remove.gif", onclick:"delDns(this);"})
+		obj.last().next().after('<br/><input type="text" class="cbi-input-text" name="dns" id="dns'+(dns_count + 1)+'" /><img src="<%=resource%>/cbi/add.gif" class="cbi-image-button" onclick="addDns();">');
+		dns_count++;
+	}
+	function delDns(obj){
+		var j_obj = $(obj)
+		j_obj.prev().remove();
+		j_obj.next().remove();
+		j_obj.remove();
+	}
+
+	function create_attr(obj){
+		if (obj.value == "dhcp") {
+			$("#addrDiv").remove();
+			$("#maskDiv").remove();
+			$("#gatewayDiv").remove();
+			$("#dnsDiv").remove();
+		} else {
+			$("#protocolDiv").after('<div id="addrDiv" class="cbi-value"><label class="cbi-value-title"><%:IP address%></label><div class="cbi-value-field"><input type="text" class="cbi-input-text" name="address" id="address" /></div></div><div id="maskDiv" class="cbi-value"><label class="cbi-value-title"><%:IP netmask%></label><div class="cbi-value-field"><select class="cbi-input-select" name="netmask" id="netmask" onchange="inputMask(this);"><option value="255.255.255.0" selected="selected">255.255.255.0</option><option value="255.255.0.0">255.255.0.0</option><option value="255.0.0.0">255.0.0.0</option><option value="">-- custom --</option></select></div></div><div id="gatewayDiv" class="cbi-value"><label class="cbi-value-title"><%:Gateway%></label><div class="cbi-value-field"><input type="text" class="cbi-input-text" name="gateway" id="gateway" /></div></div><div id="dnsDiv" class="cbi-value"><label class="cbi-value-title"><%:DNS servers%></label><div class="cbi-value-field"><div><input type="text" class="cbi-input-text" name="dns" id="dns1" /><img src="<%=resource%>/cbi/add.gif" class="cbi-image-button" onclick="addDns();"></div></div></div>');
+		}
+	}
+
+	function inputMask(obj){
+		if (obj.value == "") {
+			var pobj = $(obj).parent();
+			$(obj).remove();
+			pobj.prepend('<input type="text" class="cbi-input-text" name="netmask" id="netmask" />');
+		}
+	}
+
+	function isValidIP(ip) {
+		if (ip == "") {
+			return false;
+		}     
+    	var reg = /^(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])$/     
+    	return reg.test(ip);     
+	}
+
+	function switch_proto(){
+		var data = "protocol="+$("#protocol").val();
+		var dnss = $("input[name='dns']");
+	
+		if ($("#protocol").val() != "dhcp") {
+			if (!isValidIP($("#address").val())) {
+				alert("invalid ip");
+				return false;
+			}
+			if (!isValidIP($("#netmask").val())) {
+				alert("invalid netmask");
+				return false;
+			}
+			if (!isValidIP($("#gateway").val())) {
+				alert("invalid gateway");
+				return false;
+			}
+			data += "&address="+$("#address").val()+"&netmask="+$("#netmask").val()+"&gateway="+$("#gateway").val()+"&dns=";
+			for (var i = 0; i < dnss.length; i++) {
+				if (!isValidIP(dnss.get(i).value)) {
+					alert("invalid dns");
+					return false;
+				}
+				data += dnss.get(i).value+" "
+			}
+			data = data.substr(0, data.length - 1);
+		}
+
+		var e = document.getElementById('cbi-apply-system-status');
+		if(e){
+			e.parentNode.style.display = "inline";
+		}
+		stxhr.get('<%=luci.dispatcher.build_url("rxhf", "network")%>/switch_proto', data, function(x){
+				if (x.responseText){
+					if (x.responseText == "finish") {
+						var e = document.getElementById('cbi-apply-system-status');
+						if(e){
+							e.innerHTML = x.responseText;
+							window.setTimeout(function(){e.parentNode.style.display = 'none';}, 1000);
+						}
+					} else {
+						var e = document.getElementById('cbi-apply-system-status');
+						if(e) { 
+							e.innerHTML = x.responseText;
+						}
+					}
+				}
+			}
+		);
+	}
+//]]></script>
+
+<form method="post" action="">
+	<div class="cbi-map">
+		<h2><a id="content" name="content"><%:Ethernet%></a></h2>
+		<fieldset class="cbi-section" id="cbi-apply-system" style="display: none;">
+			<legend>Applying changes</legend>
+			<img src="<%=resource%>/icons/loading.gif" alt="Loading" style="vertical-align:middle">
+			<span id="cbi-apply-system-status">Configuration applied.</span>
+		</fieldset>
+		<fieldset class="cbi-section" id="section">
+			<legend><%:Ethernet IP%></legend>
+			<div id="protocolDiv" class="cbi-value">
+				<label class="cbi-value-title"><%:Protocol%></label>
+				<div class="cbi-value-field">
+					<select class="cbi-input-select" name="protocol" id="protocol" onchange="create_attr(this);">
+						<option value="dhcp"><%:DHCP client%></option>
+						<option value="static"><%:Static address%></option>
+					</select>
+				</div>
+			</div>
+		</fieldset>
+	</div>
+</form>
+<div class="cbi-page-actions">
+	<input type="button" value="<%:Switch protocol%>" class="cbi-button cbi-button-save" onclick="switch_proto()"/>
+</div>
+
+<%+footer%>

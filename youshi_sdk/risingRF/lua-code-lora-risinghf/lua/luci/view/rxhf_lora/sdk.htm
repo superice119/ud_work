@@ -1,0 +1,252 @@
+<%#
+ Copyright 2008 Steven Barth <steven@midlink.org>
+ Copyright 2008 Jo-Philipp Wich <jow@openwrt.org>
+ Licensed to the public under the Apache License 2.0.
+-%>
+
+<%-
+	function split_last(str, c)
+		local re_str = string.reverse(str)
+		return string.reverse(string.sub(re_str, 1, string.find(re_str, c) - 1))
+	end
+
+	local json = require "luci.json"
+	local x = luci.model.uci.cursor()
+
+	local use_lora_sdk_ver
+	local file
+	local data
+	local name = split_last(REQUEST_URI, "/")
+	local lora_sdk_ver = luci.http.formvalue("lora_sdk_ver")
+	if lora_sdk_ver then
+		use_lora_sdk_ver = lora_sdk_ver
+	else
+		use_lora_sdk_ver = x:get("rxhf", name, "use_lora_sdk_ver")
+	end
+	local lora_sdk_ver_name = x:get("rxhf", use_lora_sdk_ver, "name")
+	local pg_base_path = x:get("rxhf", lora_sdk_ver_name, "pg_base_path")
+	local model = x:get("rxhf", lora_sdk_ver_name, "model")
+	local use_config = x:get("rxhf", lora_sdk_ver_name, "use_config")
+
+	for i, v in ipairs(x:get("rxhf", use_lora_sdk_ver, "sdk_config")) do
+		if split_last(v, "/") == "local_conf.json" then
+			file = io.open(v, "r")
+			break
+		end
+	end
+
+	if file then
+		local json_data = file:read("*a")
+		data = json.decode(json_data)
+		file:close()
+	end
+-%>
+<%+header%>
+<script type="text/javascript" src="<%=resource%>/cbi.js"></script>
+<script type="text/javascript" src="<%=resource%>/jquip.all.min.js"></script>
+<script type="text/javascript">
+	var stxhr = new XHR();
+
+	$(function(){
+		var model = "<%=model%>";
+		var use_config = "<%=use_config%>";
+		if (model && use_config) {
+			$("#model").val(model);
+
+			stxhr.get('<%=luci.dispatcher.build_url("rxhf", "lora")%>/load_config', "pg_base_path=<%=pg_base_path%>&model="+model, function(x, json){
+				if (x.status == 200 && json) {
+					var shtml = '<select class="cbi-input-select" style="width: 235px;" name="config" id="config"><option value="">-- select one --</option>';
+					for (var i = 0; i < json.length; i++) {
+						shtml += '<option value="' + json[i].config + '">' + json[i].config + '</option>'
+					}
+					shtml += '</select>';
+					var pss = $("#config").parent();
+					$("#config").remove();
+					pss.prepend(shtml);
+					$("#config").val(use_config);
+				}
+			});
+		}
+	});
+
+	function load_ver(obj){
+		window.location.href = '<%=luci.dispatcher.build_url("rxhf", "lora")%>/pfw?lora_sdk_ver=' + obj.value;
+	}
+
+	function load_config(obj){
+		stxhr.get('<%=luci.dispatcher.build_url("rxhf", "lora")%>/load_config', "pg_base_path=<%=pg_base_path%>&model="+obj.value, function(x, json){
+			if (x.status == 200 && json) {
+				var shtml = '<select class="cbi-input-select" style="width: 235px;" name="config" id="config"><option value="">-- select one --</option>';
+				for (var i = 0; i < json.length; i++) {
+					shtml += '<option value="' + json[i].config + '">' + json[i].config + '</option>'
+				}
+				shtml += '</select>';
+				var pss = $("#config").parent();
+				$("#config").remove();
+				pss.prepend(shtml);
+			}
+		});
+	}
+
+	function enable(){
+		//$(window).scrollTop(0); // jump top
+		var e = document.getElementById('cbi-apply-system-status');
+		if(e){
+			e.innerHTML = 'Configuration applied.';
+			e.parentNode.style.display = "inline";
+		}
+		stxhr.get('<%=luci.dispatcher.build_url("rxhf", "lora")%>/enable_lora', "use_lora_sdk=<%=name%>&use_lora_sdk_ver="+$("#lora_sdk_ver").val(), function(x) {
+				if (x.responseText) {
+					if (x.responseText == "finish") {
+						var e = document.getElementById('cbi-apply-system-status');
+						if(e){
+							e.innerHTML = x.responseText;
+							window.setTimeout(function(){
+								location.reload();
+							}, 500);
+						}
+					} else {
+						var e = document.getElementById('cbi-apply-system-status');
+						if(e) e.innerHTML = x.responseText;
+					}
+				}
+			}
+		);
+	}
+
+	function modify_config(){
+		var c = document.getElementById("config");
+		if (c) {
+			if (c.value == ""){
+				alert("Please select Global Config.");
+				return false;
+			}
+		}
+		
+		var r = confirm("If you are using the packet forwarder that need to restart, is it OK?");
+		if (r) {
+			var e = document.getElementById('cbi-apply-system-status');
+			if(e){
+				e.innerHTML = 'Configuration applied.';
+				e.parentNode.style.display = "inline";
+			}
+			stxhr.get('<%=luci.dispatcher.build_url("rxhf", "lora")%>/modify_config', "name=<%=name%>&use_lora_sdk_ver="+$("#lora_sdk_ver").val()+"&gateway_id="+$("#gateway_id").val()+"&server_addr="+$("#server_addr").val()+"&port_up="+$("#port_up").val()+"&port_down="+$("#port_down").val()+"&model="+$("#model").val()+"&use_config="+$("#config").val(), function(x) {
+					if (x.responseText) {
+						if (x.responseText == "finish") {
+							var e = document.getElementById('cbi-apply-system-status');
+							if(e){
+								e.innerHTML = x.responseText;
+								window.setTimeout(function(){e.parentNode.style.display = 'none';}, 1000);
+							}
+						} else {
+							var e = document.getElementById('cbi-apply-system-status');
+							if(e) e.innerHTML = x.responseText;
+						}
+					}
+				}
+			);
+		}
+	}
+</script>
+
+<form method="post" action="" name="lora_form">
+	<h2><a id="content" name="content"><%:Lora%></a></h2>
+	<fieldset class="cbi-section" id="cbi-apply-system" style="display: none;">
+		<legend>Applying changes</legend>
+		<img src="<%=resource%>/icons/loading.gif" alt="Loading" style="vertical-align:middle">
+		<span id="cbi-apply-system-status">Configuration applied.</span>
+	</fieldset>
+	<fieldset class="cbi-section">
+		<legend><%:Lora SDK Config%></legend>
+		<table width="100%" cellspacing="10">
+			<tr>
+				<td width="33%"><%:Protocol Version%></td>
+				<td>
+					<select class="cbi-input-select" name="lora_sdk_ver" id="lora_sdk_ver" onchange="load_ver(this);">
+					<%-
+						for i, v in ipairs(x:get("rxhf", name, "lora_sdk_ver")) do
+							if v == use_lora_sdk_ver then
+					-%>
+								<option value="<%=x:get('rxhf', v, 'name')%>" selected = "selected"><%=x:get("rxhf", v, "ver_desc")%></option>
+					<%-
+							else
+					-%>
+								<option value="<%=x:get('rxhf', v, 'name')%>"><%=x:get("rxhf", v, "ver_desc")%></option>
+					<%-
+							end
+						end
+					-%>
+					</select>
+				</td>
+				<td></td>
+			</tr>
+			<%-
+				if data then
+			-%>
+				<%-
+					if data['gateway_conf']['gateway_ID'] then
+				-%>
+			<tr>
+				<td width="33%"><%:Gateway ID%></td>
+				<td>
+					<input type="text" class="cbi-input-text" name="gateway_id" id="gateway_id" value="<%=data['gateway_conf']['gateway_ID']%>" />
+				</td>
+				<td></td>
+			</tr>
+				<%-
+					end
+					if data['gateway_conf']['server_address'] then
+				-%>
+			<tr>
+				<td width="33%"><%:Server Address%></td>
+				<td>
+					<input type="text" class="cbi-input-text" name="server_addr" id="server_addr" value="<%=data['gateway_conf']['server_address']%>"/>
+				</td>
+				<td></td>
+			</tr>
+				<%-
+					end
+					if data['gateway_conf']['serv_port_up'] and data['gateway_conf']['serv_port_down'] then
+				-%>
+			<tr>
+				<td width="33%"><%:Port%></td>
+				<td>
+					<input type="text" class="cbi-input-text" onkeyup="if(this.value.length==1){this.value=this.value.replace(/[^1-9]/g,'')} else {this.value=this.value.replace(/\D/g,'')}" onafterpaste="if(this.value.length==1){this.value=this.value.replace(/[^1-9]/g,'0')}else{this.value=this.value.replace(/\D/g,'')}" name="port_up" id="port_up" value="<%=data['gateway_conf']['serv_port_up']%>"/>
+				</td>
+				<td>
+					<input type="text" class="cbi-input-text" style="width: 235px;" onkeyup="if(this.value.length==1){this.value=this.value.replace(/[^1-9]/g,'')} else {this.value=this.value.replace(/\D/g,'')}" onafterpaste="if(this.value.length==1){this.value=this.value.replace(/[^1-9]/g,'0')}else{this.value=this.value.replace(/\D/g,'')}" name="port_down" id="port_down" value="<%=data['gateway_conf']['serv_port_down']%>"/>
+				</td>
+			</tr>
+			<%-
+					end
+				end
+			-%>
+			<%-
+				if pg_base_path then
+			-%>
+			<tr><td width="33%"><%:Global Config%></td>
+				<td>
+					<select class="cbi-input-select" name="model" id="model" onchange="load_config(this);">
+						<option value="434">RHF2S024-434</option>
+						<option value="470">RHF2S024-470</option>
+						<option value="780">RHF2S024-780</option>
+						<option value="868">RHF2S024-868</option>
+						<option value="915">RHF2S024-915</option>
+					</select>
+				</td>
+				<td>
+					<select class="cbi-input-select" style="width: 235px;" name="config" id="config"></select>
+				</td>
+			</tr>
+			<%-
+				end
+			-%>
+		</table>
+	</fieldset>
+</form>
+<div class="cbi-page-actions">
+	<input type="button" value="<%:Submit%>" class="cbi-button cbi-button-save" onclick="modify_config();"/> 
+	<input type="button" value="<%:Enable%>" class="cbi-button cbi-button-apply" onclick="enable();"/>
+	<!-- <input type="button" value="<%:Reset%>" class="cbi-button cbi-button-reset" onclick="document.lora_form.reset();"/> -->
+</div>
+<%+footer%>
