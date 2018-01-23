@@ -7,13 +7,13 @@
 	model = "VL7628";
 
 	chosen {
-		bootargs = "console=ttyS2,115200";
+		bootargs = "console=ttyS0,57600";
 	};
 
 	pinctrl {
 		state_default: pinctrl0 {
 		   gpio {
-			   ralink,group = "gpio","i2s", "wdt", "refclk", "perst","wled_an","ephy_p1","ephy_p2","ephy_p3","ephy_p4","pwm0", "pwm1", "sdmode";
+			   ralink,group = "gpio","i2c", "i2s", "wdt","refclk", "perst", "spis", "ephy_p1", "ephy_p2", "ephy_p3", "ephy_p4", "pwm0", "pwm1", "sdmode";
 			   ralink,function = "gpio";
 		   };
 		};
@@ -63,6 +63,78 @@
 				linux,modalias = "spidev", "spidev";
 				spi-max-frequency = <100000000>;
 			};
+
+			spidev@2 {
+				#address-cells = <1>;
+				#size-cells = <1>;
+				compatible = "spidev";
+				reg = <2 0>;
+				linux,modalias = "spidev", "spidev";
+				spi-max-frequency = <100000000>;
+			};
+			spidev@3 {
+				#address-cells = <1>;
+				#size-cells = <1>;
+				compatible = "spidev";
+				reg = <3 0>;
+				linux,modalias = "spidev", "spidev";
+				spi-max-frequency = <100000000>;
+			};
+
+			spidev@4 {
+				#address-cells = <1>;
+				#size-cells = <1>;
+				compatible = "spidev";
+				reg = <4 0>;
+				linux,modalias = "spidev", "spidev";
+				spi-max-frequency = <100000000>;
+			};
+
+			spidev@5 {
+				#address-cells = <1>;
+				#size-cells = <1>;
+				compatible = "spidev";
+				reg = <5 0>;
+				linux,modalias = "spidev", "spidev";
+				spi-max-frequency = <100000000>;
+			};
+
+			spidev@6 {
+				#address-cells = <1>;
+				#size-cells = <1>;
+				compatible = "spidev";
+				reg = <6 0>;
+				linux,modalias = "spidev", "spidev";
+				spi-max-frequency = <100000000>;
+			};
+
+			spidev@7 {
+				#address-cells = <1>;
+				#size-cells = <1>;
+				compatible = "spidev";
+				reg = <7 0>;
+				linux,modalias = "spidev", "spidev";
+				spi-max-frequency = <100000000>;
+			};
+
+			spidev@8 {
+				#address-cells = <1>;
+				#size-cells = <1>;
+				compatible = "spidev";
+				reg = <8 0>;
+				linux,modalias = "spidev", "spidev";
+				spi-max-frequency = <100000000>;
+			};
+
+			spidev@9 {
+				#address-cells = <1>;
+				#size-cells = <1>;
+				compatible = "spidev";
+				reg = <9 0>;
+				linux,modalias = "spidev", "spidev";
+				spi-max-frequency = <100000000>;
+			};
+
 		};
 
 		uart1@d00 {
@@ -89,6 +161,11 @@
 			label = "reset";
 			gpios = <&gpio1 6 1>;
 			linux,code = <0x198>;
+		};
+		wps {
+			label = "wps";
+			gpios = <&gpio0 5 1>;
+			linux,code = <0x211>;
 		};
 	};
 /*
@@ -140,13 +217,14 @@
 			gpio-export,direction_may_change = <1>;
 			gpios = <&gpio0 4 0>;
 		};
+/*
 		gpio5 {
-			/* i2c sd */
 			gpio-export,name = "gpio5";
 			gpio-export,output = <0>;
 			gpio-export,direction_may_change = <1>;
 			gpios = <&gpio0 5 0>;
 		};
+*/
 		gpio18 {
 			/* RP Port2 */
 			gpio-export,name = "gpio18";
