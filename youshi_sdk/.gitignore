@@ -10,7 +10,6 @@
 /tmp
 /logs
 /files
-/package/feeds
 /package/openwrt-packages
 key-build*
 *.orig
