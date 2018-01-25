@@ -2,10 +2,8 @@
 *.a
 *.bak
 *~
-*.bin
 *.elf
 /doc
 .menuconfig.log
 .tmp_config
 /scripts
-/httpd/fsdata.c
