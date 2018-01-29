@@ -1,0 +1,119 @@
+#!/bin/sh
+
+apsta() {
+	uci delete network.wwan 2> /dev/null
+	uci delete network.wan 2> /dev/null
+	uci set network.wwan=interface
+	uci set network.wwan.proto=dhcp
+	uci set network.wwan.hostname=udgw001a
+	uci set network.lan.ifname=eth0
+
+	uci set wireless.radio0.linkit_mode=apsta
+	uci set wireless.ap.ssid="$1"
+	if [ "$2" == "null" ]; then
+		uci delete wireless.ap.key 2> /dev/null
+		uci set wireless.ap.encryption=none
+	else
+		uci set wireless.ap.key="$2"
+		uci set wireless.ap.encryption=psk2
+	fi
+
+	uci set wireless.sta.ssid="$3"
+	if [ "$4" == "null" ]; then
+		uci delete wireless.sta.key 2> /dev/null
+		uci set wireless.sta.encryption=none
+	else  
+		uci set wireless.sta.key="$4"
+		uci set wireless.sta.encryption=psk2
+	fi
+	uci commit wireless
+	uci commit network
+}
+
+ap() {
+	uci delete network.wwan 2> /dev/null
+	uci delete network.wan 2> /dev/null
+	uci delete network.lan.ifname 2> /dev/null
+	uci set network.wan=interface
+	uci set network.wan.proto=dhcp
+	uci set network.wan.hostname=udgw001a
+	uci set network.wan.ifname=eth0
+
+	uci set wireless.radio0.linkit_mode=ap
+	uci set wireless.ap.ssid="$1"
+	if [ "$2" == "null" ]; then
+		uci delete wireless.ap.key 2> /dev/null
+		uci set wireless.ap.encryption=none
+	else  
+		uci set wireless.ap.key="$2"
+		uci set wireless.ap.encryption=psk2
+	fi
+	uci commit wireless
+	uci commit network
+}
+
+pppoe() {
+	uci delete network.wwan 2> /dev/null
+	uci delete network.wan 2> /dev/null
+	uci delete network.lan.ifname 2> /dev/null
+	uci set network.wan=interface
+	uci set network.wan.ifname=eth0
+	uci set network.wan.proto=pppoe
+	uci set network.wan.username="$3"
+	uci set network.wan.password="$4"
+
+	uci set wireless.radio0.linkit_mode=ap
+	uci set wireless.ap.ssid="$1"
+	if [ "$2" == "null" ]; then
+		uci delete wireless.ap.key 2> /dev/null
+		uci set wireless.ap.encryption=none
+	else  
+		uci set wireless.ap.key="$2"
+		uci set wireless.ap.encryption=psk2
+	fi
+	uci commit wireless
+	uci commit network
+}
+
+if [ "$1" == "apsta" ]; then
+	wifi down
+	sleep 1
+fi
+
+case "$2" in
+apsta)
+	apsta "$3" "$4" "$5" "$6"
+	;;
+ap)	
+	ap "$3" "$4"
+	;;
+pppoe)
+	pppoe "$3" "$4" "$5" "$6"
+	;;
+esac
+/etc/init.d/network restart
+
+uci set rxhf.mode.net_mode="$2"
+uci commit rxhf
+if [ "$2" == "apsta" ]; then
+	local ipaddr
+	for i in 1 2 3 4 5 6 7 8 9 10 11 12
+	do
+		sleep 2
+		ipaddr=$(ifconfig apcli0 | awk '/inet addr/ {print $1}')
+		if [ "$ipaddr" == "inet" ]; then
+			break
+		fi
+	done
+	if [ "$ipaddr" != "inet" ]; then
+		wifi down
+		sleep 1
+		ap "$3" "$4"
+		uci set rxhf.mode.net_mode=ap
+		uci set rxhf.mode.fail=1
+		uci commit rxhf
+		/etc/init.d/network restart
+	fi
+fi
+
+exit 0

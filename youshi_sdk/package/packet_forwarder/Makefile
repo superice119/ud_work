@@ -48,6 +48,7 @@ define Package/risinghf-pfw/install
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/lora_pkt_fwd/global_conf.json $(1)/home/rxhf/packet_forwarder/lora_pkt_fwd
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/lora_pkt_fwd/local_conf.json $(1)/home/rxhf/packet_forwarder/lora_pkt_fwd
 	$(INSTALL_DIR) $(1)/usr/bin
+	$(INSTALL_BIN) ./files/usr/bin/net_mode $(1)/usr/bin
 	$(INSTALL_BIN) ./files/reset_lgw.sh $(1)/usr/bin
 	$(INSTALL_BIN) ./files/test_loragw_reg $(1)/usr/bin
 	$(INSTALL_BIN) ./files/test_loragw_spi $(1)/usr/bin
