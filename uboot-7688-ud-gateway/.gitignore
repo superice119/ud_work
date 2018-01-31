@@ -1,9 +1,0 @@
-*.o
-*.a
-*.bak
-*~
-*.elf
-/doc
-.menuconfig.log
-.tmp_config
-/scripts
